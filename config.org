@@ -1,5 +1,3 @@
-
-
 #+title: KB's emacs config
 #+author: KittyBlam
 #+email: sky@beepycat.net
@@ -10,13 +8,22 @@
 
 * Configuration sections!
 asdfjkasdfjkasfd
+
+Here is an inline LaTeX formula: \( E = mc^2 \).
+
+
+\[
+\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
+\]
+
 ** Initiation
 
 askldfjaklsd klf
 
-#+begin_src emacs-lisp :tangle yes
-;;; init.el -*- lexical-binding: t -*-
-;;; Code
+#+begin_src emacs-lisp 
+
+  ;;; init.el -*- lexical-binding: t -*-
+  ;;; Code
 
   (set-frame-parameter nil 'alpha-background 95)
   (add-to-list 'default-frame-alist '(alpha-background . 95))
@@ -34,7 +41,7 @@ askldfjaklsd klf
   (setq guix-emacs-autoload-packages 't)
 
   (setq inhibit-startup-screen t
-        initial-scratch-message nil)
+        initial-scratch-message "scrungly")
 
 
   (defface my-org-background-face
@@ -49,39 +56,36 @@ askldfjaklsd klf
 
   (add-hook 'org-mode-hook 'my/apply-org-background)
 
+  (defun my-org-babel-tangle-and-compile ()
+    "Tangle the current org file and compile any resulting C files."
+    (interactive)
+    (when (string-equal (file-name-extension (buffer-file-name)) "org")
+      (let ((current-dir default-directory))
+        ;; Tangle the Org file
+        (org-babel-tangle)
+        (message "Tangling complete.")
+        
+        ;; Get the list of tangled files
+        (dolist (file (org-babel-tangle-file (buffer-file-name)))
+          ;; Check if the file is a C file
+          (when (string-equal (file-name-extension file) "c")
+            (let ((base-name (file-name-sans-extension file))
+                  (output-file (concat (file-name-sans-extension file) ".so")))
+              ;; Compile the C file
+              (shell-command (format "gcc -shared -o %s -fPIC %s `pkg-config --cflags --libs guile-3.0`" output-file file))
+              (message "Compiled %s to %s" file output-file))))
+        
+        ;; Restore the original directory
+        (cd current-dir))))
 
-  
-(defun my-org-babel-tangle-and-compile ()
-  "Tangle the current org file and compile any resulting C files."
-  (interactive)
-  (when (string-equal (file-name-extension (buffer-file-name)) "org")
-    (let ((current-dir default-directory))
-      ;; Tangle the Org file
-      (org-babel-tangle)
-      (message "Tangling complete.")
-      
-      ;; Get the list of tangled files
-      (dolist (file (org-babel-tangle-file (buffer-file-name)))
-        ;; Check if the file is a C file
-        (when (string-equal (file-name-extension file) "c")
-          (let ((base-name (file-name-sans-extension file))
-                (output-file (concat (file-name-sans-extension file) ".so")))
-            ;; Compile the C file
-            (shell-command (format "gcc -shared -o %s -fPIC %s `pkg-config --cflags --libs guile-3.0`" output-file file))
-            (message "Compiled %s to %s" file output-file))))
-      
-      ;; Restore the original directory
-      (cd current-dir))))
-
-(add-hook 'after-save-hook 'my-org-babel-tangle-and-compile)
-
-(setq line-spacing 0)
+  (add-hook 'after-save-hook 'my-org-babel-tangle-and-compile)
 
 #+end_src
 
 asdklfasdf
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
+
   (add-hook 'scheme-mode-hook #'flymake-guile)
 
   (use-package flymake-guile
@@ -101,6 +105,7 @@ asdklfasdf
 
   (global-set-key (kbd "C-<f5>") #'rustic-cargo-run)
   (global-set-key (kbd "S-C-<f5>") #'rustic-cargo-comint-run)
+  
 #+end_src
 
 asdlkfjasfklfjklasflsdk
@@ -109,7 +114,7 @@ asdlkfjasfklfjklasflsdk
 
 sets a lot of various variables
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
 
 
   (show-paren-mode 1)
@@ -138,16 +143,17 @@ sets a lot of various variables
   (setq highlight-indent-guides-responsive 'top)
 
   (set-fringe-mode '(12 . 12))
+  
 #+end_src
 
 ** TODO Rest
 
 indeed
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
 
 
-   ;; (setq eyebrowse-)
+
 
    (use-package god
      :bind
@@ -208,7 +214,8 @@ These are some customizeations I have for wisp-mode.el that should make things w
 
 Here we customize the tabs for wisp-mode
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
+
   (defun my-wisp-mode-customizations ()
     "Custom configurations for wisp-mode."
     (setq tab-width 2)              ;; Set the tab width to 2 spaces
@@ -238,6 +245,7 @@ Here we customize the tabs for wisp-mode
       (if (>= next-indent (+ prev tab-width 1))
           (wisp--indent 0)
         (wisp--indent next-indent))))
+  
 #+end_src
 
 *** Wisp font-lock faces
@@ -246,7 +254,8 @@ This is where I have my custom font-lock faces, it's still a WIP!
 
 First we define some faces:
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
+
   (defface wisp-defined-name-face
     '((t :inherit font-lock-function-name-face))
     "Face for names defined by specific procedures in wisp-mode.")
@@ -254,11 +263,12 @@ First we define some faces:
   (defface wisp-function-face
     '((t :inherit font-lock-function-name-face))
     "Face for names of functions defined in wisp-mode.")
+  
 #+end_src
 
 Then we have this monstrosity!
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
 
 
   (with-eval-after-load 'wisp-mode
@@ -316,11 +326,12 @@ Then we have this monstrosity!
     	   ))))
 
   (provide 'wisp-font-lock-settings)
+  
 #+end_src
 
 ** asdfkl
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
 
 
   (setq corfu-echo-delay '(0 . 0))			;(2.0 . 1.0)
@@ -369,7 +380,6 @@ Then we have this monstrosity!
 
 #+BEGIN_SRC elisp
 
-
   (setq minimap-window-location 'right)
 
 
@@ -378,13 +388,12 @@ Then we have this monstrosity!
   			'(("define-syntax-rule" . font-lock-keyword-face)))
 
   (add-hook 'after-change-major-mode-hook 'variable-pitch-mode)
+  
 #+END_SRC
 
 #+BEGIN_SRC elisp
 
   (global-set-key (kbd "C-S-p") #'ivy-yasnippet)
-
-  (global-set-key (kbd "<mouse-1>") #'org-cycle)
 
   (global-set-key (kbd "<backtab>") #'treemacs)
   (define-key treemacs-mode-map (kbd "<backtab>") #'treemacs)
@@ -463,6 +472,8 @@ Then we have this monstrosity!
 
   (define-key god-local-mode-map (kbd "M-o") #'ace-window)
 
+  (with-eval-after-load 'treemacs
+    (define-key treemacs-mode-map [mouse-1] #'treemacs-single-click-expand-action))
 
   ;; (use-package geiser
   ;;   :ensure t)
@@ -566,48 +577,12 @@ Then we have this monstrosity!
    '(treemacs ((t (:background "#ffffff"))))
    '(treemacs-directory-face ((t (:foreground "#a8704f" :family "Cozette Vector"))))
    '(treemacs-root-face ((t (:foreground "#80b065" :height 120 :family "Cozette" :weight bold)))))
+  
 #+end_src
 
-#+RESULTS:
 *** Org Modern Indent
 
-#+begin_src emacs-lisp :tangle yes
-
-  ;;; org-modern-indent.el --- org-indent blocks like org-modern -*- lexical-binding: t; -*-
-  ;; Copyright (C) 2022-2024  J.D. Smith
-
-  ;; Author: J.D. Smith
-  ;; Homepage: https://github.com/jdtsmith/org-modern-indent
-  ;; Package-Requires: ((emacs "27.1") (org "9.5.2") (compat "29.1.4.0"))
-  ;; Version: 0.1.4
-  ;; Keywords: convenience
-  ;; Prefix: org-modern-indent
-  ;; Separator: -
-
-  ;; org-modern-indent is free software: you can redistribute it and/or
-  ;; modify it under the terms of the GNU General Public License as
-  ;; published by the Free Software Foundation, either version 3 of the
-  ;; License, or (at your option) any later version.
-
-  ;; org-modern-indent is distributed in the hope that it will be useful,
-  ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  ;; General Public License for more details.
-
-  ;; You should have received a copy of the GNU General Public License
-  ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-  ;;; Commentary:
-
-  ;; org-modern-indent provides the block highlighting of org-modern,
-  ;; when org-indent is enabled.
-  ;;   
-  ;; Can be used with or without org-modern enabled.
-
-  ;;; Code:
-  (require 'compat)
-  (require 'org-indent)
-  (eval-when-compile (require 'cl-lib))
+#+begin_src emacs-lisp 
 
   (defgroup org-modern-indent nil
     "Org-modern style blocks which works with org-indent."
@@ -843,9 +818,13 @@ Then we have this monstrosity!
 #+end_src
 
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp 
+
   (add-hook 'org-mode-hook 'org-modern-indent-mode)
   (add-hook 'org-mode-hook 'org-modern-mode)
   (add-hook 'org-mode-hook 'olivetti-mode)
   (add-hook 'org-mode-hook 'org-indent-mode)
+  
 #+end_src
+
+
