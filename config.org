@@ -1,0 +1,851 @@
+
+
+#+title: KB's emacs config
+#+author: KittyBlam
+#+email: sky@beepycat.net
+#+description: Literate emacs config!
+#+startup: overview
+# #+property: header-args :tangle "./out/init.el" :noweb yes :mkdirp yes
+
+
+* Configuration sections!
+asdfjkasdfjkasfd
+** Initiation
+
+askldfjaklsd klf
+
+#+begin_src emacs-lisp :tangle yes
+;;; init.el -*- lexical-binding: t -*-
+;;; Code
+
+  (set-frame-parameter nil 'alpha-background 95)
+  (add-to-list 'default-frame-alist '(alpha-background . 95))
+
+  (solaire-mode -1)
+
+  (load-theme 'GayTheme t)
+
+  (defun load-gay-theme (_frame)
+    (enable-theme 'GayTheme))
+
+  (add-hook 'after-make-frame-functions #'load-gay-theme)
+  (add-hook 'after-init-hook #'solaire-global-mode)
+
+  (setq guix-emacs-autoload-packages 't)
+
+  (setq inhibit-startup-screen t
+        initial-scratch-message nil)
+
+
+  (defface my-org-background-face
+    '((t (:background "#593b25"))) ;; Dimbright
+    "Face for the background of Org mode buffers.")
+
+  (defun my/apply-org-background ()
+    "Apply a custom background color to Org mode buffers."
+    (face-remap-add-relative 'default 'my-org-background-face)
+    (face-remap-add-relative 'fringe 'my-org-background-face))
+
+
+  (add-hook 'org-mode-hook 'my/apply-org-background)
+
+
+  
+(defun my-org-babel-tangle-and-compile ()
+  "Tangle the current org file and compile any resulting C files."
+  (interactive)
+  (when (string-equal (file-name-extension (buffer-file-name)) "org")
+    (let ((current-dir default-directory))
+      ;; Tangle the Org file
+      (org-babel-tangle)
+      (message "Tangling complete.")
+      
+      ;; Get the list of tangled files
+      (dolist (file (org-babel-tangle-file (buffer-file-name)))
+        ;; Check if the file is a C file
+        (when (string-equal (file-name-extension file) "c")
+          (let ((base-name (file-name-sans-extension file))
+                (output-file (concat (file-name-sans-extension file) ".so")))
+            ;; Compile the C file
+            (shell-command (format "gcc -shared -o %s -fPIC %s `pkg-config --cflags --libs guile-3.0`" output-file file))
+            (message "Compiled %s to %s" file output-file))))
+      
+      ;; Restore the original directory
+      (cd current-dir))))
+
+(add-hook 'after-save-hook 'my-org-babel-tangle-and-compile)
+
+(setq line-spacing 0)
+
+#+end_src
+
+asdklfasdf
+
+#+begin_src emacs-lisp :tangle yes
+  (add-hook 'scheme-mode-hook #'flymake-guile)
+
+  (use-package flymake-guile
+    :ensure t
+    :hook (scheme-mode-hook . flymake-guile))
+
+
+  (use-package which-key
+    ;;defer t
+    ;;diminish which-key-mode
+    :config
+    ;;(which-key-mode)
+    (which-key-enable-god-mode-support)
+    (setq which-key-idle-delay 0.2))
+
+  (setq eldoc-documentation-strategy 'eldoc-documentation-compose)
+
+  (global-set-key (kbd "C-<f5>") #'rustic-cargo-run)
+  (global-set-key (kbd "S-C-<f5>") #'rustic-cargo-comint-run)
+#+end_src
+
+asdlkfjasfklfjklasflsdk
+
+** Misc Variables
+
+sets a lot of various variables
+
+#+begin_src emacs-lisp :tangle yes
+
+
+  (show-paren-mode 1)
+  (global-paren-face-mode 1)
+  (scroll-bar-mode 0)
+  (tool-bar-mode 0)
+  (menu-bar-mode 0)
+  (global-prettify-symbols-mode 1)
+  (global-pretty-mode 0)
+  (tab-bar-mode -1)
+  (column-number-mode 1)
+  (which-key-mode 1)
+  (electric-indent-mode nil)
+  (global-corfu-mode 1)
+  (ivy-rich-mode 1)
+  (global-page-break-lines-mode 1)
+  (display-time-mode 1)
+  (yas-global-mode 1)
+  (company-mode 0)
+  (setq display-time-day-and-date 1)
+  (setq use-dialog-box nil)
+  (setq visible-bell nil)
+  (variable-pitch-mode 1)
+
+  (setq highlight-indent-guides-method 'character)
+  (setq highlight-indent-guides-responsive 'top)
+
+  (set-fringe-mode '(12 . 12))
+#+end_src
+
+** TODO Rest
+
+indeed
+
+#+begin_src emacs-lisp :tangle yes
+
+
+   ;; (setq eyebrowse-)
+
+   (use-package god
+     :bind
+     ("M-SPC" . god-mode-all))
+   (god-mode)
+   (setq god-exempt-major-modes nil)
+   (setq god-exempt-predicates nil)
+
+
+   (setq lsp-rust-server 'rust-analyzer)
+
+   (add-hook 'eglot--managed-mode-hook (lambda () (flymake-mode -1)))
+   (setq rustic-lsp-client 'eglot)
+
+
+   (setq-default pgtk-wait-for-event-timeout 0)
+   (setq corfu-popupinfo-delay 0.2)
+   (setq corfu-count 30)
+   (setq corfu-auto t)
+   (setq corfu-auto-delay 0)
+   (setq corfu-popupinfo-max-height 100)
+
+   (setq dap-cpptools-extension-version "1.5.1")
+
+   (with-eval-after-load 'eglot-rust-analyzer
+     (require 'dap-cpptools))
+
+   (with-eval-after-load 'dap-cpptools
+     ;; Add a template specific for debugging Rust programs.
+     ;; It is used for new projects, where I can M-x dap-edit-debug-template
+     (dap-register-debug-template
+      "Rust::CppTools Run Configuration"
+      (list :type "cppdbg"
+            :request "launch"
+            :name "Rust::Run"
+            :MIMode "gdb"
+            :miDebuggerPath "rust-gdb"
+            :environment []
+            :program "${workspaceFolder}/target/debug/hello / replace with binary"
+            :cwd "${workspaceFolder}"
+            :console "external"
+            :dap-compilation "cargo build"
+            :dap-compilation-dir "${workspaceFolder}")))
+
+   (with-eval-after-load 'dap-mode
+     (setq dap-default-terminal-kind "integrated")
+     ;; Make sure that terminal programs open a term for I/O in an Emacs buffer
+     (dap-auto-configure-mode +1))
+#+end_src
+
+** wisp
+
+Wisp is a custom whitespace language for guile scheme, it's made to be more readable and more reasonable than normal guile, while being easier to write and less overwhelming.
+
+These are some customizeations I have for wisp-mode.el that should make things work much much much better.
+
+*** Wisp Tabs
+
+Here we customize the tabs for wisp-mode
+
+#+begin_src emacs-lisp :tangle yes
+  (defun my-wisp-mode-customizations ()
+    "Custom configurations for wisp-mode."
+    (setq tab-width 2)              ;; Set the tab width to 2 spaces
+    (setq wisp-indent-offset 2)
+    (setq indent-tabs-mode nil)
+    )    ;; Use spaces instead of tabs
+
+  (add-hook 'wisp-mode-hook 'my-wisp-mode-customizations)
+
+  (defun wisp--tab ()
+    "Cycle through indentations depending on the previous line.
+  If the current indentation is equal to the previous line,
+     increase indentation by one tab width,
+  if the current indentation is zero,
+     indent up to the previous line,
+  if the current indentation is less than the previous line,
+     increase by one tab width, but at most to the previous line.
+  If already at the maximum indentation, reset to no indentation."
+    (interactive)
+    (let* ((curr (wisp--current-indent))
+           (prev (wisp--prev-indent))
+           (next-indent (if (or (zerop curr)
+                                (< curr prev))
+                            (+ curr tab-width)
+                          (+ prev tab-width))))
+      ;; Reset to no indentation if next-indent is greater than prev + tab-width
+      (if (>= next-indent (+ prev tab-width 1))
+          (wisp--indent 0)
+        (wisp--indent next-indent))))
+#+end_src
+
+*** Wisp font-lock faces
+
+This is where I have my custom font-lock faces, it's still a WIP!
+
+First we define some faces:
+
+#+begin_src emacs-lisp :tangle yes
+  (defface wisp-defined-name-face
+    '((t :inherit font-lock-function-name-face))
+    "Face for names defined by specific procedures in wisp-mode.")
+
+  (defface wisp-function-face
+    '((t :inherit font-lock-function-name-face))
+    "Face for names of functions defined in wisp-mode.")
+#+end_src
+
+Then we have this monstrosity!
+
+#+begin_src emacs-lisp :tangle yes
+
+
+  (with-eval-after-load 'wisp-mode
+    (setq wisp-font-lock-keywords
+          `((;; Initial hashbang
+
+  	    (,(rx "#:init-keyword" (+ space)
+                   (group "#:" (1+ (or alphanumeric "-" "_"))))
+              (1 font-lock-constant-face))
+  	   
+             (,(rx bol "#!" (0+ any)) . font-lock-comment-face)
+    	   ("#|\\(?:.\\|\n\\)*?|#" . font-lock-comment-face)
+             (,(rx (any "{")) . font-lock-string-face)
+    	   (,(rx (any "}")) . font-lock-string-face)
+             (,(rx bow (or "define"
+    			 "define*"
+    			 "define-language"
+    			 "define-syntax-rule"
+    			 "use-modules"
+    			 "define-record-type"
+    			 "define-class"
+    			 "define-method")
+    		 eow) . font-lock-keyword-face)
+    	   (,(rx "#:" (1+ (or alphanumeric "-" "_")))
+              . font-lock-builtin-face)
+             (, (rx "#" (or "t" "f")) . font-lock-constant-face)
+             (,(rx "#\\" (1+ (not (any " ")))) . font-lock-constant-face)
+    	   (,(rx symbol-start
+                   (or (and (opt (or "+" "-"))
+                            (1+ digit)
+                            (opt "." (0+ digit))
+                            (opt (or "e" "E") (opt (or "+" "-")) (1+ digit)))
+                       (and "#" (or "b" "o" "d" "x") (1+ hex-digit)))
+                   symbol-end)
+              . font-lock-constant-face)	   
+             (,(rx "'()") . font-lock-constant-face)
+             (,(rx (or ":" ".")) . font-lock-keyword-face)
+    	   (,(rx (group "<" (0+ (not (any ">"))) ">")) . font-lock-type-face)
+             (,(rx bow (group "define") eow) (1 font-lock-keyword-face))
+             (,(rx bow (group "define") (+ " ") (group (+ (not space))))
+              (1 font-lock-keyword-face)
+              (2 font-lock-function-name-face))
+
+             (,(rx bow (group "define") (+ " ") "(" (group (+ (not ")"))) ")")
+              (1 font-lock-keyword-face)
+              (2 font-lock-function-name-face))
+    	   ;; 
+             (,(rx bow (group (or "define :"
+    				"define-method :"
+    				"define-syntax-rule\n"))
+    		 (+ " ") (group (+ (not space))))
+              (1 font-lock-keyword-face)
+              (2 font-lock-function-name-face))
+    	   ("^\\(?: *\\)[^ :][^ \t]*" . (0 font-lock-builtin-face append))
+    	   ))))
+
+  (provide 'wisp-font-lock-settings)
+#+end_src
+
+** asdfkl
+
+#+begin_src emacs-lisp :tangle yes
+
+
+  (setq corfu-echo-delay '(0 . 0))			;(2.0 . 1.0)
+  (setq corfu-echo-mode 1)
+
+  (setq eldoc-idle-delay 0)			;0.5
+
+  (use-package treemacs
+    :ensure t)
+
+  (setq treemacs-space-between-root-nodes nil)
+
+  (treemacs-create-theme "GayTree"
+    :icon-directory "/home/kitty/.emacs.d/icons"
+    :config
+    (progn
+      (custom-set-faces
+       `(treemacs-directory-face ((t (:foreground ,dimSuperb :family "Cozette Vector" :weight normal))))
+       `(treemacs-root-face ((t (:foreground ,greenNormal :family "Unifont" :weight bold :height 120)))))
+      
+      ;; `(treemacs-root-face ((t (:foreground ,greenBlock :height 120 :family "Unifont" :weight bold)))))
+      
+      (treemacs-create-icon :file "root-open.png"     :extensions (root-open))
+      (treemacs-create-icon :file "root-closed.png"   :extensions (root-closed))
+      (treemacs-create-icon :file "dir-open.png"      :extensions (dir-open))
+      (treemacs-create-icon :file "dir-closed.png"    :extensions (dir-closed))
+      (treemacs-create-icon :file "emacs.png"         :extensions ("el" "elc"))
+      (treemacs-create-icon :file "scheme.png"        :extensions ("scm"))
+      (treemacs-create-icon :file "rust.png"          :extensions ("rs"))
+      (treemacs-create-icon :file "c.png"             :extensions ("c"))
+      (treemacs-create-icon :file "readme.png"        :extensions ("readme.md"))
+      ;; (treemacs-create-icon :file "src-closed.png"    :extensions ("src-closed"))
+      ;; (treemacs-create-icon :file "src-open.png"      :extensions ("src-open"))
+      (treemacs-create-icon :file "tag-leaf.png"      :extensions (tag-leaf))
+      (treemacs-create-icon :file "tag-open.png"      :extensions (tag-open))
+      (treemacs-create-icon :file "tag-closed.png"      :extensions (tag-closed))
+      (treemacs-create-icon :file "file.png"          :extensions (fallback))
+      ;; (treemacs-create-icon :icon (all-the-icons-icon-for-file "yaml") :extensions ("yml" "yaml"))
+      ))
+
+  (add-hook 'treemacs-mode-hook (lambda () (treemacs-resize-icons 16)))
+
+  (treemacs-load-theme "GayTree")
+
+#+END_SRC
+
+#+BEGIN_SRC elisp
+
+
+  (setq minimap-window-location 'right)
+
+
+
+  (font-lock-add-keywords 'scheme-mode
+  			'(("define-syntax-rule" . font-lock-keyword-face)))
+
+  (add-hook 'after-change-major-mode-hook 'variable-pitch-mode)
+#+END_SRC
+
+#+BEGIN_SRC elisp
+
+  (global-set-key (kbd "C-S-p") #'ivy-yasnippet)
+
+  (global-set-key (kbd "<mouse-1>") #'org-cycle)
+
+  (global-set-key (kbd "<backtab>") #'treemacs)
+  (define-key treemacs-mode-map (kbd "<backtab>") #'treemacs)
+
+
+  (global-set-key (kbd "C-x C-1") #'delete-other-windows)
+  (global-set-key (kbd "C-p") #'goto-line)
+  (global-set-key (kbd "C-2") #'split-window-below)
+  (global-set-key (kbd "C-3") #'split-window-right)
+  (global-set-key (kbd "C-0") #'delete-window)
+  (global-set-key (kbd "C-o") #'other-window)
+  (global-set-key (kbd "C-5") #'toggle-frame-split)
+
+
+  (global-set-key (kbd "C-S-k") #'follow-scroll-down-window)
+  (global-set-key (kbd "C-S-j") #'follow-scroll-up-window)
+
+
+  (global-set-key (kbd "C-n") #'backward-char)
+  (global-set-key (kbd "C-l") #'forward-char)
+
+
+  (global-set-key (kbd "C-n") #'backward-char)
+  (global-set-key (kbd "C-l") #'forward-char)
+
+  (define-key god-local-mode-map (kbd "j") #'next-line)
+  (global-set-key (kbd "C-j") #'next-line)
+
+  (global-set-key (kbd "C-k") #'previous-logical-line)
+
+  (define-key treemacs-mode-map (kbd "C-k") #'previous-logical-line)
+
+  (global-set-key (kbd "M-k") #'backward-paragraph)
+  (global-set-key (kbd "M-j") #'forward-paragraph)
+
+  (global-set-key (kbd "M-l") #'sp-forward-symbol)
+  (global-set-key (kbd "M-n") #'sp-backward-symbol)
+
+
+  (global-set-key (kbd "C-(") #'paredit-wrap-sexp)
+
+
+  (global-set-key (kbd "C-S-W") #'whitespace-mode)
+  (global-set-key (kbd "C-u") #'counsel-find-file)
+
+  (global-set-key (kbd "C-<tab>") #'completion-at-point)
+
+  (global-set-key (kbd "C-S-u") #'counsel-unicode-char)
+  (define-key god-local-mode-map (kbd "b") #'helm-buffers-list)
+
+  (define-key god-local-mode-map (kbd "C-S-N") #'delete-backward-char)
+  (define-key god-local-mode-map (kbd "`") #'sp-backward-delete-word)
+
+  (define-key god-local-mode-map (kbd "M-S-n") #'mark-paragraph)
+  (define-key god-local-mode-map (kbd "M-S-l") #'mark-sexp)
+  (define-key god-local-mode-map (kbd "M-i") #'mark-sexp)
+
+  (define-key god-local-mode-map (kbd "=") #'org-edit-src-code)
+  (define-key god-local-mode-map (kbd "+") #'org-edit-src-exit)
+
+  (define-key god-local-mode-map (kbd "z") #'set-mark-command)
+
+  (define-key god-local-mode-map (kbd "SPC") #'counsel-M-x)
+
+  (setq ivy-height 20)			;10
+  (setq ivy-initial-inputs-alist nil)
+
+
+
+  ;; (define-key god-local-mode-map (kbd "s") #'helm-occur)
+  (define-key god-local-mode-map (kbd "s") #'swiper)
+
+  (define-key god-local-mode-map (kbd "C-S-S") #'replace-regexp)
+
+  (define-key god-local-mode-map (kbd "M-p") #'display-line-numbers-mode)
+
+  (define-key god-local-mode-map (kbd "M-o") #'ace-window)
+
+
+  ;; (use-package geiser
+  ;;   :ensure t)
+  ;; (define-key scheme-mode-map (kbd "C-S-C") #'arei-evaluate-last-sexp)
+
+  ;; (use-pack )
+
+  (define-key lisp-mode-map (kbd "C-r") #'eval-region)
+  ;; (define-key lisp-mode-map (kbd "C-r") #'eval-region)
+  ;; (define-key scheme-mode-map (kbd "C-c C-r") #'arei-evaluate-region)
+  (define-key god-local-mode-map (kbd "C-c C-r") #'arei-evaluate-region)
+
+
+  (define-key god-local-mode-map (kbd "M-<left>") #'windmove-left)
+  (define-key god-local-mode-map (kbd "M-<down>") #'windmove-down)
+  (define-key god-local-mode-map (kbd "M-<up>") #'windmove-up)
+  (define-key god-local-mode-map (kbd "M-<right>") #'windmove-right)
+
+  (define-key god-local-mode-map (kbd "M-S-<left>") #'windmove-swap-states-left)
+  (define-key god-local-mode-map (kbd "M-S-<down>") #'windmove-swap-states-down)
+  (define-key god-local-mode-map (kbd "M-S-<up>") #'windmove-swap-states-up)
+  (define-key god-local-mode-map (kbd "M-S-<right>") #'windmove-swap-states-right)
+
+
+
+  (define-key god-local-mode-map (kbd "C-<f7>") #'magit-stage)
+  (define-key god-local-mode-map (kbd "C-<f8>") #'magit-commit)
+  (define-key god-local-mode-map (kbd "C-<f4>") #'magit)
+
+#+END_SRC
+
+#+BEGIN_SRC elisp
+
+
+  (defun toggle-frame-split ()
+    (interactive)
+    (unless (= (length (window-list)) 2)
+      (error "Can only toggle a frame split in two"))
+    (let ((split-vertically-p (window-combined-p)))
+      (delete-window) ; closes current window
+      (if split-vertically-p
+          (split-window-horizontally)
+        (split-window-vertically))
+      (switch-to-buffer nil)))
+
+
+
+
+  (use-package org
+    :config
+    (setq org-ellipsis " ↴")
+    (setq org-confirm-babel-evaluate nil)
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((scheme . t)
+       (wisp . t)
+       (haskell . t)
+       (forth . t)
+       (fortran . t))))
+
+  (use-package rainbow-delimiters
+    :hook (rust-mode . rainbow-delimiters-mode))
+
+  (add-hook 'c-mode-hook 'rainbow-delimiters-mode)
+
+  (add-hook 'prog-mode-hook 'corfu-mode)
+  (add-hook 'prog-mode-hook 'corfu-popupinfo-mode)
+  ;; (add-hook 'prog-mode-hook 'smartparens-mode)
+
+  ;; (setq org-modern-block-fringe 0)
+  (setq olivetti-style 't)
+  (setq olivetti-body-width 100)
+
+  (setq org-todo-keywords
+        '((sequence "PROJECT" "SUPPLY!" "TODO" "|" "DONE" "DELEGATED")))
+
+  (use-package simple-modeline
+    :config
+    (simple-modeline-mode))
+
+  (setq pubmed-scihub-url "https://sci-hub.ru/")
+
+  (setq highlight-indent-guides-auto-enabled nil)
+
+
+  (custom-set-variables
+   ;; custom-set-variables was added by Custom.
+   ;; If you edit it by hand, you could mess it up, so be careful.
+   ;; Your init file should contain only one such instance.
+   ;; If there is more than one, they won't work right.
+   '(custom-safe-themes
+     '(GayTheme
+       default))
+   '(package-selected-packages nil))
+
+  (custom-set-faces
+   ;; custom-set-faces was added by Custom.
+   ;; If you edit it by hand, you could mess it up, so be careful.
+   ;; Your init file should contain only one such instance.
+   ;; If there is more than one, they won't work right.
+   '(treemacs ((t (:background "#ffffff"))))
+   '(treemacs-directory-face ((t (:foreground "#a8704f" :family "Cozette Vector"))))
+   '(treemacs-root-face ((t (:foreground "#80b065" :height 120 :family "Cozette" :weight bold)))))
+#+end_src
+
+#+RESULTS:
+*** Org Modern Indent
+
+#+begin_src emacs-lisp :tangle yes
+
+  ;;; org-modern-indent.el --- org-indent blocks like org-modern -*- lexical-binding: t; -*-
+  ;; Copyright (C) 2022-2024  J.D. Smith
+
+  ;; Author: J.D. Smith
+  ;; Homepage: https://github.com/jdtsmith/org-modern-indent
+  ;; Package-Requires: ((emacs "27.1") (org "9.5.2") (compat "29.1.4.0"))
+  ;; Version: 0.1.4
+  ;; Keywords: convenience
+  ;; Prefix: org-modern-indent
+  ;; Separator: -
+
+  ;; org-modern-indent is free software: you can redistribute it and/or
+  ;; modify it under the terms of the GNU General Public License as
+  ;; published by the Free Software Foundation, either version 3 of the
+  ;; License, or (at your option) any later version.
+
+  ;; org-modern-indent is distributed in the hope that it will be useful,
+  ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  ;; General Public License for more details.
+
+  ;; You should have received a copy of the GNU General Public License
+  ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+  ;;; Commentary:
+
+  ;; org-modern-indent provides the block highlighting of org-modern,
+  ;; when org-indent is enabled.
+  ;;   
+  ;; Can be used with or without org-modern enabled.
+
+  ;;; Code:
+  (require 'compat)
+  (require 'org-indent)
+  (eval-when-compile (require 'cl-lib))
+
+  (defgroup org-modern-indent nil
+    "Org-modern style blocks which works with org-indent."
+    :group 'org
+    :prefix "org-modern-indent-")
+
+  ;; Face for org-modern-indent line
+  (defface org-modern-indent-bracket-line
+    '((t (:inherit (org-meta-line) :weight light)))
+    "Face for bracket line in org-modern-indent."
+    :group 'faces)
+
+  (defconst org-modern-indent-begin (propertize "╭" 'face 'org-modern-indent-bracket-line))
+  (defconst org-modern-indent-guide (propertize "│" 'face 'org-modern-indent-bracket-line))
+  (defconst org-modern-indent-end   (propertize "╰" 'face 'org-modern-indent-bracket-line))
+
+  (defvar org-modern-indent-begin-re
+    "\\([ \t]*\\)\\(#\\+\\)\\(?:begin\\|BEGIN\\)_\\S-")
+  (defvar org-modern-indent--font-lock-keywords
+    `((,(concat "^" org-modern-indent-begin-re)
+       (0 (org-modern-indent--block-bracket)))))
+
+  (defun org-modern-indent--block-bracket ()
+    "Prettify blocks with in-text brackets.
+  For use with `org-indent'.  Uses either in-text brackets, for
+  auto-indented org text (with real spaces in the buffer, e.g. in
+  plain lists), or `line-prefix' brackets, when the #+begin part of
+  the block is flush left in the buffer."
+    (save-excursion
+      (goto-char (match-beginning 0))
+      (if (= (length (match-string 1)) 0)
+  	(org-modern-indent--block-bracket-flush)
+        (org-modern-indent--block-bracket-indented)))
+    nil)
+
+  (defvar org-modern-indent--block-prefixes (make-hash-table :test 'eq))
+  (defun org-modern-indent--block-bracket-prefix (prefix)
+    "Return a vector of 3 prefix strings based on the length of the current PREFIX.
+  The three returned prefixes include begin, guide, and end bracket
+  indicators, and are cached by prefix length, for speed.
+  Additionally, the original prefix string is included at the end
+  of the returned vector.  If PREFIX is nil or empty, nil is
+  returned."
+    (unless (or (not prefix) (string-empty-p prefix))
+      (let* ((l (length prefix)))
+        (or (gethash l org-modern-indent--block-prefixes)
+  	  (puthash l (cl-loop for type in '("begin" "guide" "end")
+  			      for tstr = (symbol-value
+  					  (intern (concat "org-modern-indent-" type)))
+  			      with pstr = (substring prefix 0 -1)
+  			      collect (concat pstr tstr) into prefix-brackets
+  			      finally return (vconcat prefix-brackets (list prefix)))
+  		   org-modern-indent--block-prefixes)))))
+
+  (defun org-modern-indent--block-bracket-flush ()
+    "Insert brackets for org blocks flush with the line prefix."
+    (let* ((lpf (get-text-property (point) 'line-prefix))
+  	 (beg (match-beginning 0))
+  	 (pind (match-beginning 2))
+  	 (vec (org-modern-indent--block-bracket-prefix lpf))
+  	 (block-start (min (1+ (line-end-position)) (point-max))))
+      (with-silent-modifications
+        (put-text-property pind (1+ pind) 'org-modern-indent-block-type 'flush)
+        (when vec
+  	(add-text-properties beg block-start
+  			     `( line-prefix ,(aref vec 0)
+  				wrap-prefix ,(aref vec 1)))
+  	(goto-char (match-end 0))
+  	(when (re-search-forward "^[ \t]*#\\+\\(?:end\\|END\\)_" nil 'noerror)
+  	  (let ((b (line-beginning-position))
+  		(p (line-beginning-position 2)))
+  	    (when (> b block-start)
+  	      (add-text-properties block-start b
+  				   `(line-prefix ,(aref vec 1) wrap-prefix ,(aref vec 1))))
+  	    (add-text-properties b p
+  				 `(line-prefix ,(aref vec 2) wrap-prefix ,(aref vec 3)))))))))
+
+  (defun org-modern-indent--block-bracket-indented ()
+    "Insert brackets on space-indented org blocks, e.g. within plain lists."
+    (let* ((pf (get-text-property (point) 'line-prefix)) ; prefix from org-indent
+  	 (pind (match-beginning 2))		       ; at the #
+  	 (flush (eq (get-text-property pind 'org-modern-indent-block-type) 'flush))
+  	 (indent (current-indentation)) ; space up to #+begin_
+  	 (block-indent (+ (point) indent))
+  	 (search (concat "^[[:blank:]]\\{" (number-to-string indent) "\\}"))
+  	 (wrap (concat
+  		(if pf (propertize (make-string (length pf) ?\s) 'face 'org-indent))
+  		(if (> indent 1) (make-string (1- indent) ?\s))
+  		org-modern-indent-guide))
+  	 orig-prefix)
+      (with-silent-modifications
+        (when flush		  ; formerly this block was flush left
+  	(when-let ((vec (org-modern-indent--block-bracket-prefix pf)))
+  	  (setq pf (aref vec 3)	       ; for resetting prefix to saved
+  		orig-prefix `(line-prefix ,pf))
+  	  (add-text-properties (point) (min (line-beginning-position 2) (point-max))
+  			       `(line-prefix ,pf wrap-prefix ,pf))) ; restore
+  	(put-text-property pind (1+ pind) 'org-modern-indent-block-type 'indent))
+        (put-text-property (point) block-indent 'face nil)
+        (put-text-property (1- block-indent) block-indent
+  			 'display org-modern-indent-begin)
+        (while
+  	  (progn
+  	    (add-text-properties
+               (point) (min (line-beginning-position 2) (point-max))
+               `(wrap-prefix ,wrap ,@orig-prefix))
+  	    (forward-line)
+  	    (setq block-indent (+ (point) indent))
+  	    (let ((lep (line-beginning-position 2)))
+  	      (when (< block-indent lep)
+  		(put-text-property (point) block-indent 'face nil))
+  	      (cond
+  	       ((eobp) nil)
+  	       ((looking-at "^\\([ \t]*\\)#\\+\\(?:end\\|END\\)_")
+  		(if (>= (length (match-string 1)) indent)
+  		    (put-text-property (1- block-indent) block-indent
+  				       'display org-modern-indent-end))
+  		(when flush
+  		  (add-text-properties
+  		   (point) (min (line-beginning-position 2) (point-max))
+  		   `(wrap-prefix ,pf ,@orig-prefix)))
+  		nil)
+  	       (t (if (and (<= block-indent lep) (looking-at-p search))
+  		      (put-text-property (1- block-indent) block-indent
+  					 'display org-modern-indent-guide))
+  		  t))))))))
+
+  (defvar-local org-modern-indent--init nil)
+  (defun org-modern-indent--wait-and-refresh (buf)
+    "Wait for org-indent to finish initializing BUF, then refresh."
+    (if (or (not (bound-and-true-p org-indent-agentized-buffers))
+  	  (not (memq buf org-indent-agentized-buffers)))
+        (org-modern-indent--add-keywords buf)
+      ;; still waiting
+      (when (buffer-live-p buf)
+        (with-current-buffer buf
+  	(if org-modern-indent--init
+  	    (let ((cnt (cl-incf (cadr org-modern-indent--init))))
+  	      (if (> cnt 5)
+  		  (user-error
+  		   "org-modern-indent: Gave up waiting for %s to initialize"
+  		   buf)
+  		(timer-activate
+  		 (timer-set-time (car org-modern-indent--init)
+  				 (time-add (current-time) 0.2)))))
+  	  (setq
+  	   org-modern-indent--init
+  	   (list (run-at-time 0.1 nil #'org-modern-indent--wait-and-refresh buf)
+  		 1)))))))
+
+  (defun org-modern-indent--add-keywords (buf)
+    "Add keywords to buffer BUF and refresh.
+  To be added to `org-indent-post-buffer-init-functions'."
+    (when (buffer-live-p buf)	     ; org-capture buffers vanish fast
+      (with-current-buffer buf
+        (font-lock-add-keywords nil org-modern-indent--font-lock-keywords t)
+        (font-lock-flush))))
+
+  (defun org-modern-indent--refresh ()
+    "Unfontify entire buffer and refresh line prefix."
+    (with-silent-modifications
+      (if org-indent-mode
+  	(org-indent-refresh-maybe (point-min) (point-max) nil))
+      (font-lock-flush)))
+
+  (defun org-modern-indent--unfontify-wrap (fun)
+    "Wrap FUN with extra font lock keywords."
+    (lambda (beg end)
+      (let* ((font-lock-extra-managed-props
+  	    (append '(display invisible) font-lock-extra-managed-props)))
+        (funcall fun beg end))))
+
+  (defvar org-modern-indent--refresh-args nil)
+  (defun org-modern-indent--store-refresh-args (args)
+    "Store the arguments ARGS for `org-indent-add-properties'.
+  To be added as :filter-args advice."
+    (setq org-modern-indent--refresh-args args))
+
+  (defun org-modern-indent--refresh-watch (fun beg end &rest r)
+    "Watch for org-indent heading refreshes and rebuild prefixes as needed.
+  FUN is the wrapped function `org-indent-refresh-maybe', and BEG,
+  END, and R are its arguments."
+    (let ((hmod org-indent-modified-headline-flag) p end2 is-flush)
+      (apply fun beg end r)
+      ;; Recover the args just passed to org-indent-add-properties
+      (setq end2 (cadr org-modern-indent--refresh-args))
+      (when (or hmod (/= end end2))
+        (setq p (1- beg))
+        (save-excursion
+  	(while (< (setq p (next-single-property-change
+  			   (1+ p) 'org-modern-indent-block-type nil end2))
+  		  end2)
+  	  (goto-char p)
+  	  (setq is-flush
+  		(eq (get-text-property p 'org-modern-indent-block-type) 'flush))
+  	  (when (looking-at org-modern-indent-begin-re)
+  	    (if is-flush
+  		(org-modern-indent--block-bracket-flush)
+  	      (org-modern-indent--block-bracket-indented))))))))
+
+  ;;;###autoload
+  (define-minor-mode org-modern-indent-mode
+    "Org-modern-like block brackets within org-indent."
+    :global nil
+    :group 'org-modern-indent
+    (if org-modern-indent-mode
+        (progn
+  	(advice-add 'org-indent-refresh-maybe :around
+  		    #'org-modern-indent--refresh-watch)
+  	(advice-add 'org-indent-add-properties :filter-args
+  		    #'org-modern-indent--store-refresh-args)
+  	(if (boundp 'org-indent-post-buffer-init-functions)
+  	    (add-hook 'org-indent-post-buffer-init-functions
+  		      #'org-modern-indent--add-keywords)
+  	  ;; No hook available, use the less reliable method
+  	  (org-modern-indent--wait-and-refresh (current-buffer))))
+      ;; Disabling
+      (advice-remove 'org-indent-refresh-maybe
+  		   #'org-modern-indent--refresh-watch)
+      (advice-remove 'org-indent-add-properties
+  		   #'org-modern-indent--store-refresh-args)
+      (font-lock-remove-keywords nil org-modern-indent--font-lock-keywords)
+      (if (boundp 'org-indent-post-buffer-init-functions)
+  	(remove-hook 'org-indent-post-buffer-init-functions
+  		     #'org-modern-indent--add-keywords)
+        (cancel-timer (car org-modern-indent--init))
+        (setq org-modern-indent--init nil))
+      (org-modern-indent--refresh)))
+
+  (provide 'org-modern-indent)
+  ;;; org-modern-indent.el ends here
+    
+#+end_src
+
+
+#+begin_src emacs-lisp :tangle yes
+  (add-hook 'org-mode-hook 'org-modern-indent-mode)
+  (add-hook 'org-mode-hook 'org-modern-mode)
+  (add-hook 'org-mode-hook 'olivetti-mode)
+  (add-hook 'org-mode-hook 'org-indent-mode)
+#+end_src
